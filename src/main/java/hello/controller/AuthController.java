@@ -1,5 +1,6 @@
 package hello.controller;
 
+import hello.entity.LoginResult;
 import hello.entity.Result;
 import hello.entity.User;
 import hello.service.UserService;
@@ -34,14 +35,14 @@ public class AuthController {
 
     @GetMapping("/auth")
     @ResponseBody
-    public Object auth() {
+    public Result auth() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
         User userByUsername = userService.getUserByUsername(authentication == null ? null : authentication.getName());
         if (userByUsername == null) {
-            return new Result("ok", "用户没有登录", false);
+            return LoginResult.success("用户没有登录", false);
         }
-        return new Result("ok", null, userByUsername, true);
+        return LoginResult.success(null, userByUsername, true);
     }
 
     @PostMapping("/auth/register")
@@ -50,20 +51,21 @@ public class AuthController {
         String username = usernameAndPassword.get("username");
         String password = usernameAndPassword.get("password");
         if (username == null || password == null) {
-            return Result.failed("用户名或密码不能为空");
+            return LoginResult.failed("用户名或密码不能为空");
         }
         if (username.length() < 1 || username.length() > 15) {
-            return Result.failed("invalid username");
+            return LoginResult.failed("invalid username");
         }
         if (password.length() < 6 || password.length() > 15) {
-            return Result.failed("invalid username");
+            return LoginResult.failed("invalid username");
         }
         User user = userService.getUserByUsername(username);
         if (user == null) {
             userService.save(username, password);
-            return Result.success("success!");
+            User SuccessUser = userService.getUserByUsername(username);
+            return LoginResult.registerSuccess("success!", SuccessUser);
         }
-        return Result.failed("user already exists");
+        return LoginResult.failed("user already exists");
     }
 
     @PostMapping("/auth/login")
@@ -75,15 +77,15 @@ public class AuthController {
         try {
             userDetails = userService.loadUserByUsername(username);
         } catch (UsernameNotFoundException e) {
-            return Result.failed("用户不存在");
+            return LoginResult.failed("用户不存在");
         }
         UsernamePasswordAuthenticationToken token = new UsernamePasswordAuthenticationToken(userDetails, password, userDetails.getAuthorities());
         try {
             authenticationManager.authenticate(token);
             SecurityContextHolder.getContext().setAuthentication(token);
-            return new Result("ok", "登录成功", userService.getUserByUsername(username), true);
+            return LoginResult.success("登录成功", userService.getUserByUsername(username), true);
         } catch (BadCredentialsException e) {
-            return Result.failed("密码不正确");
+            return LoginResult.failed("密码不正确");
         }
     }
 
@@ -93,10 +95,10 @@ public class AuthController {
         String username = SecurityContextHolder.getContext().getAuthentication().getName();
         User user = userService.getUserByUsername(username);
         if (user == null) {
-            return Result.failed("用户没有登陆");
+            return LoginResult.failed("用户没有登陆");
         }
         SecurityContextHolder.clearContext();
-        return Result.success("success!");
+        return LoginResult.success("success!",true);
     }
 
 }
